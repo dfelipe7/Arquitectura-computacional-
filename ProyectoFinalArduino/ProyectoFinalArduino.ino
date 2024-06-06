@@ -75,6 +75,31 @@ int valueluz;
  */
 int valuegas;
 
+
+/// @brief Pin digital para el pushbutton.
+/// 
+/// Se define el pin digital utilizado para el pushbutton.
+#define PIN_BUTTON 13
+
+/// @brief Estado anterior del pushbutton.
+///
+/// Almacena el estado anterior del pushbutton para detectar cambios.
+bool lastButtonState = HIGH;  // Estado inicial como HIGH debido a la resistencia pull-up interna
+
+/// @brief Estado actual del botón.
+bool currentButtonState;
+
+/// @brief Bandera para indicar si el botón ha sido liberado.
+bool buttonReleased = true;
+
+bool buttonPressedLastLoop = false; // Variable para mantener el estado del botón en el ciclo anterior
+
+// Variables globales
+bool buttonState = HIGH;  // Estado inicial del botón (no presionado)
+//bool lastButtonState = HIGH;  // Estado anterior del botón (inicializado igual al estado actual)
+unsigned long lastDebounceTime = 0;  // Último tiempo de rebote del botón
+unsigned long debounceDelay = 0;  // Retardo de rebote del botón en milisegundos
+
 /** 
  * @brief Contraseña predeterminada y contraseña ingresada por el usuario.
  * @details Define la contraseña predeterminada y la contraseña ingresada por el usuario.
@@ -118,7 +143,7 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
  * @brief Instanciación de objetos para los botones.
  */
 const bool pullup = true;
-const byte pwmPin = 6;
+const byte pwmPin = 13;
 
 /** 
  * @brief Variables para controlar un pin y mostrar el estado con texto.
@@ -258,6 +283,7 @@ AsyncTask TaskTemp(2500, true, readtemp);
 AsyncTask TaskLuz(2500, true, readlight);
 AsyncTask TaskGas(2000, true, readgas);
 AsyncTask TaskRetorno(100, true, retorno);
+
 AsyncTask asyncTask_10seg(10000, tmOut10);
 AsyncTask asyncTask_5seg(5000, tmOut5);
 
@@ -482,6 +508,7 @@ void output_alarma()
  */
 void setup() {
   Serial.begin(250000);
+
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_BLUE, OUTPUT);
@@ -489,6 +516,7 @@ void setup() {
 
   pinMode(analogPin, INPUT);
   pinMode(pwmPin, OUTPUT);
+  pinMode(PIN_BUTTON, INPUT_PULLUP);
   lcd.begin(16, 2);
 
   tempHigh_Line.attach_function(1, tempHigh_up);
@@ -523,11 +551,15 @@ void loop()
   TaskLuz.Update();
   TaskGas.Update();
   TaskRetorno.Update();
+  readButton();
   
   asyncTask_10seg.Update();
   asyncTask_5seg.Update();
   stateMachine.Update();
   currentInput = static_cast<Input>(Input::desconocido);
+
+
+    
 }
 
 /**
@@ -585,6 +617,41 @@ void seguridad() {
     currentInput = static_cast<Input>(Input::claveCorrecta);
   }
 
+}
+
+/**
+ * @brief Maneja la entrada del usuario para el retorno al estado anterior.
+ * 
+ * Esta función espera a que el usuario presione el botón y
+ * establece la entrada como 'btn_Press' cuando se detecta esta acción.
+ */
+void readButton(){
+  // Leer el estado del botón
+    bool reading = digitalRead(PIN_BUTTON);
+
+    // Verificar si hay un cambio de estado del botón
+    if (reading != lastButtonState) {
+        // Reiniciar el temporizador de rebote
+        lastDebounceTime = millis();
+    }
+
+    // Verificar si ha pasado el tiempo de rebote
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+        // Verificar si el estado del botón ha cambiado de forma estable
+        if (reading != buttonState) {
+            // Actualizar el estado del botón
+            buttonState = reading;
+
+            // Si el botón ha sido presionado
+            if (buttonState == LOW) {
+                // Realizar alguna acción cuando el botón se presione
+                currentInput = static_cast<Input>(Input::btn_Press);
+            }
+        }
+    }
+
+    // Actualizar el estado anterior del botón
+    lastButtonState = reading;
 }
 
 /**
@@ -881,3 +948,4 @@ void reset_values() {
     menu.update();
     Serial.println(F("Valores restablecidos."));
 }
+
