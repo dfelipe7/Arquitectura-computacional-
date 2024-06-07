@@ -1,12 +1,8 @@
-/**
- * Proyecto Final Arquitectura
- * Copyright (C) 2024, Esteban Martinez, Alejandro Otálora, Carlos Martinez, Estiven Medina,Felipe Armero
- */
-
 
 /**
-* @brief Archivo principal del proyecto que incluye las bibliotecas y define las configuraciones iniciales.
+ * @brief Archivo principal del proyecto que incluye las bibliotecas y define las configuraciones iniciales.
  */
+
 #include <Keypad.h>
 #include <LiquidCrystal.h>
 #include <LiquidMenu.h>
@@ -273,7 +269,6 @@ void tmOut5_2(void) {
  */
 void seguridad();
 void menu_config();
-void monitoreo_amb();
 void readtemp(void);
 void readlight(void);
 void readgas();
@@ -360,7 +355,6 @@ void input_init()
 {
   currentInput = static_cast<Input>(Input::desconocido);
   asyncTask_seguridad.Start();
-
 }
 
 /**
@@ -573,20 +567,42 @@ void loop()
  * Si se ingresa la clave correcta, activa el LED verde y emite un sonido.
  * Si se ingresa una clave incorrecta, activa el LED azul y emite un sonido de error.
  * Si se ingresan tres claves incorrectas, activa el estado de bloqueo.
+ * @param None
+ * @return Nothing
  */
 void seguridad() {
-  // int aux=0;
   int count = 0;
+  unsigned long startTime;
+  const unsigned long timeout = 10000; // 10 segundos
+
   do {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Ingrese clave:");
     lcd.setCursor(0, 1);
+    passIngresada = ""; // Resetear la clave ingresada
+    startTime = millis(); // Registrar el tiempo inicial
+
     do {
       char key = keypad.getKey();
       if (key) {
         lcd.print('*');
         passIngresada += key;
+        startTime = millis(); // Reiniciar el tiempo porque hubo una entrada
+      }
+
+      // Verificar si se ha excedido el tiempo de espera
+      if (millis() - startTime > timeout) {
+        lcd.clear();
+        lcd.print("Clave incorrecta");
+        tone(buzzer, 1000, 3000); // Encender el buzzer a una frecuencia de 1000Hz durante 3 segundos
+        digitalWrite(LED_BLUE, HIGH);
+        delay(1000);
+        noTone(buzzer); // Apagar el buzzer
+        digitalWrite(LED_BLUE, LOW);
+        lcd.clear();
+        count += 1;
+        break; // Salir del bucle actual y pedir la clave nuevamente
       }
     } while (passIngresada.length() != password.length());
 
@@ -601,19 +617,19 @@ void seguridad() {
       digitalWrite(LED_GREEN, LOW);
       lcd.clear();
       passIngresada = "";
-    } else {
+    } else if (passIngresada.length() == password.length()) {
       lcd.clear();
       lcd.print("Clave incorrecta");
-      tone(buzzer, 1000, 3000); // Encender el buzzer a una frecuencia de 1000Hz durante 1 segundo
+      tone(buzzer, 1000, 3000); // Encender el buzzer a una frecuencia de 1000Hz durante 3 segundos
       digitalWrite(LED_BLUE, HIGH);
       delay(1000);
       noTone(buzzer); // Apagar el buzzer
       digitalWrite(LED_BLUE, LOW);
       lcd.clear();
-      passIngresada = "";
       count += 1;
     }
   } while (count != 3 && count != 5);
+
   if (count == 3) {
     currentInput = static_cast<Input>(Input::bloqueo);
   }
@@ -621,14 +637,14 @@ void seguridad() {
   if (count == 5) {
     currentInput = static_cast<Input>(Input::claveCorrecta);
   }
-
 }
 
 /**
  * @brief Maneja la entrada del usuario para el retorno al estado anterior.
- * 
  * Esta función espera a que el usuario presione el botón y
  * establece la entrada como 'btn_Press' cuando se detecta esta acción.
+ * @param None
+ * @return Nothing
  */
 void readButton(){
   // Leer el estado del botón
@@ -663,6 +679,8 @@ void readButton(){
  * @brief Función para gestionar el menú de configuración.
  * Detecta las pulsaciones de teclas y realiza las acciones correspondientes
  * (siguiente opción, anterior opción, aumentar valor, disminuir valor, seleccionar opción, cambiar estado).
+ * @param None
+ * @return Nothing
  */
 void menu_config() {
   char key = keypad.getKey();
@@ -706,9 +724,10 @@ void menu_config() {
 
 /**
  * @brief Lee la temperatura del sensor DHT y la muestra por el monitor serie.
- * 
  * Esta función lee la temperatura del sensor DHT y la muestra por el monitor serie.
  * Si la lectura falla, muestra un mensaje de error.
+ * @param None
+ * @return Nothing
  */
 void readtemp(void) {
     // Leer la temperatura como grados Celsius
@@ -732,11 +751,12 @@ void readtemp(void) {
 
 /**
  * @brief Lee el valor del sensor de luz y lo compara con los umbrales configurados.
- * 
  * Esta función lee el valor del sensor de luz, lo muestra por el monitor serie
  * y compara con los umbrales configurados de temperatura y luz alta.
  * Si la luz supera el umbral y la temperatura es alta, establece la entrada como
  * 'TemLuzHigh', de lo contrario, establece la entrada como 'timeout_5_2'.
+ * @param None
+ * @return Nothing
  */
 void readlight(void) {
     long prevtime = micros();
@@ -759,10 +779,11 @@ void readlight(void) {
 
 /**
  * @brief Lee el valor del sensor de gas y establece la entrada en función del valor leído.
- * 
  * Esta función lee el valor del sensor de gas, lo muestra por el monitor serie
  * y compara con un umbral predefinido. Si el valor leído supera el umbral,
  * establece la entrada como 'gasHigh', de lo contrario, establece la entrada como 'timeout_2'.
+ * @param None
+ * @return Nothing
  */
 void readgas() {
     valuegas = analogRead(PIN_GAS);
@@ -784,9 +805,10 @@ void readgas() {
 
 /**
  * @brief Maneja la entrada del usuario para el retorno al estado anterior.
- * 
  * Esta función espera a que el usuario presione el botón '#' en el teclado y
  * establece la entrada como 'btn_Press' cuando se detecta esta acción.
+ * @param None
+ * @return Nothing
  */
 void retorno() {
     char key = keypad.getKey();
@@ -803,9 +825,10 @@ void retorno() {
 
 /**
  * @brief Incrementa el valor de la temperatura alta en 5 grados.
- * 
  * Esta función incrementa el valor de la temperatura alta en 5 grados Celsius,
  * asegurándose de que no exceda los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void tempHigh_up() {
     if (tempHigh < 50 && tempHigh + 5 >= tempLow) { 
@@ -818,9 +841,10 @@ void tempHigh_up() {
 
 /**
  * @brief Decrementa el valor de la temperatura alta en 5 grados.
- * 
  * Esta función decrementa el valor de la temperatura alta en 5 grados Celsius,
  * asegurándose de que no caiga por debajo de los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void tempHigh_down() {
     if (tempHigh > tempLow + 5 && tempHigh - 5 >= 20) { 
@@ -833,9 +857,10 @@ void tempHigh_down() {
 
 /**
  * @brief Incrementa el valor de la temperatura baja en 5 grados.
- * 
  * Esta función incrementa el valor de la temperatura baja en 5 grados Celsius,
  * asegurándose de que no exceda los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void tempLow_up() {
     if (tempLow < 50 && tempLow + 5 <= tempHigh) { 
@@ -848,9 +873,10 @@ void tempLow_up() {
 
 /**
  * @brief Decrementa el valor de la temperatura baja en 5 grados.
- * 
  * Esta función decrementa el valor de la temperatura baja en 5 grados Celsius,
  * asegurándose de que no caiga por debajo de los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void tempLow_down() {
     if (tempLow > 20 && tempLow - 5 >= 0) {
@@ -864,9 +890,10 @@ void tempLow_down() {
 // Funciones para la luz alta 
 /**
  * @brief Incrementa el valor de la luz alta en 5 unidades.
- * 
  * Esta función incrementa el valor de la luz alta en 5 unidades,
  * asegurándose de que no exceda los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void lightHigh_up() {
     if (lightHigh < 600 && lightHigh + 100 >= lightLow) { 
@@ -879,9 +906,10 @@ void lightHigh_up() {
 
 /**
  * @brief Decrementa el valor de la luz alta en 5 unidades.
- * 
  * Esta función decrementa el valor de la luz alta en 5 unidades,
  * asegurándose de que no caiga por debajo de los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void lightHigh_down() {
     if (lightHigh > lightLow + 100 && lightHigh - 100 >= 100) { 
@@ -894,9 +922,10 @@ void lightHigh_down() {
 
 /**
  * @brief Incrementa el valor de la luz baja en 5 unidades.
- * 
  * Esta función incrementa el valor de la luz baja en 5 unidades,
  * asegurándose de que no exceda los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void lightLow_up() {
     if (lightLow < 600 && lightLow + 100 <= lightHigh) {
@@ -909,9 +938,10 @@ void lightLow_up() {
 
 /**
  * @brief Decrementa el valor de la luz baja en 5 unidades.
- * 
  * Esta función decrementa el valor de la luz baja en 5 unidades,
  * asegurándose de que no caiga por debajo de los límites establecidos y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void lightLow_down() {
     if (lightLow > 100 && lightLow - 100 >= 0) { 
@@ -924,9 +954,10 @@ void lightLow_down() {
 
 /**
  * @brief Incrementa el valor del sensor Hall en 5 unidades.
- * 
  * Esta función incrementa el valor del sensor Hall en 5 unidades,
  * asegurándose de que no exceda el límite superior establecido y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void hall_up() {
     if (hall < 700) {
@@ -939,9 +970,10 @@ void hall_up() {
 
 /**
  * @brief Decrementa el valor del sensor Hall en 5 unidades.
- * 
  * Esta función decrementa el valor del sensor Hall en 5 unidades,
  * asegurándose de que no caiga por debajo del límite inferior establecido y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void hall_down() {
     if (hall > 100) {
@@ -954,9 +986,10 @@ void hall_down() {
 
 /**
  * @brief Restablece los valores de temperatura y luz a los predeterminados.
- * 
  * Esta función restablece los valores de temperatura alta, baja, luz alta y baja a los valores predeterminados,
  * así como el valor del sensor Hall, y actualiza el menú.
+ * @param None
+ * @return Nothing
  */
 void reset_values() {
     Serial.println(F("Restableciendo valores a los predeterminados..."));
