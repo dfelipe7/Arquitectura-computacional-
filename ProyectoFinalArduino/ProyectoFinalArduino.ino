@@ -1,7 +1,12 @@
 /**
- * @brief Archivo principal del proyecto que incluye las bibliotecas y define las configuraciones iniciales.
+ * Proyecto Final Arquitectura
+ * Copyright (C) 2024, Esteban Martinez, Alejandro Otálora, Carlos Martinez, Estiven Medina,Felipe Armero
  */
 
+
+/**
+* @brief Archivo principal del proyecto que incluye las bibliotecas y define las configuraciones iniciales.
+ */
 #include <Keypad.h>
 #include <LiquidCrystal.h>
 #include <LiquidMenu.h>
@@ -156,7 +161,7 @@ int tempHigh = 25;
 int tempLow = 20;
 int lightHigh = 300;
 int lightLow = 100;
-int hall = 300;
+int hall = 400;
 
 /** 
  * @brief Valores iniciales.
@@ -333,7 +338,7 @@ void setupStateMachine()
     return currentInput == btn_Press;
   });
 
-stateMachine.SetOnEntering(INIT, input_init);
+  stateMachine.SetOnEntering(INIT, input_init);
   stateMachine.SetOnEntering(config, input_config);
   stateMachine.SetOnEntering(bloqueado, input_bloqueado);
   stateMachine.SetOnEntering(monitoreoAmb, input_monitoreoAmb);
@@ -507,7 +512,7 @@ void output_alarma()
  * Inicia la tarea de seguridad.
  */
 void setup() {
-  Serial.begin(250000);
+  Serial.begin(9600);
 
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
@@ -717,6 +722,11 @@ void readtemp(void) {
     Serial.print("Temperatura: ");
     Serial.print(valuetemp);
     Serial.println(" °C");
+    // Imprimir la temperatura en el lcd
+    lcd.clear();
+    lcd.print("Temperatura: ");
+    lcd.print(valuetemp);
+    lcd.println("°C");
     delay(1000);
 }
 
@@ -731,8 +741,13 @@ void readtemp(void) {
 void readlight(void) {
     long prevtime = micros();
     valueluz = analogRead(PIN_LUZ);
+    // Imprimir la luz en el monitor serie
     Serial.print("Luz: ");
     Serial.println(valueluz);
+    // Imprimir la luz en el lcd
+    lcd.clear();
+    lcd.print("Luz: ");
+    lcd.println(valueluz);
 
     delay(1000);
     if(valueluz > lightHigh && valuetemp > tempHigh){
@@ -751,10 +766,15 @@ void readlight(void) {
  */
 void readgas() {
     valuegas = analogRead(PIN_GAS);
-    lcd.clear();
+    // Imprimir hall en el monitor serie
     Serial.print("Gas: ");
     Serial.println(valuegas);
-
+    // Imprimir hall en el lcd
+    lcd.clear();
+    lcd.print("Gas: ");
+    lcd.println(valuegas);
+    
+    delay(1000);
     if(valuegas > hall){
         currentInput = static_cast<Input>(Input::gasHigh);
     } else {
@@ -948,4 +968,3 @@ void reset_values() {
     menu.update();
     Serial.println(F("Valores restablecidos."));
 }
-
